@@ -1,7 +1,19 @@
+import {
+  getDefaultInspectionTextTemplates,
+  getDefaultWorkItems,
+  getInspectionTextTemplates,
+  getWorkItems
+} from "./storage-repository.js";
+
 "use strict";
 
 const state = {
   photos: []
+};
+
+const repositoryState = {
+  workItems: getDefaultWorkItems(),
+  inspectionTextTemplates: getDefaultInspectionTextTemplates()
 };
 
 const elements = {};
@@ -11,7 +23,23 @@ document.addEventListener("DOMContentLoaded", () => {
   bindEvents();
   renderPhotoList();
   renderTablePreview();
+  loadRepositoryData();
 });
+
+async function loadRepositoryData() {
+  try {
+    const [workItems, inspectionTextTemplates] = await Promise.all([
+      getWorkItems(),
+      getInspectionTextTemplates()
+    ]);
+
+    repositoryState.workItems = workItems;
+    repositoryState.inspectionTextTemplates = inspectionTextTemplates;
+  } catch {
+    repositoryState.workItems = getDefaultWorkItems();
+    repositoryState.inspectionTextTemplates = getDefaultInspectionTextTemplates();
+  }
+}
 
 function cacheElements() {
   elements.projectName = document.getElementById("projectName");
@@ -316,4 +344,3 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
-
