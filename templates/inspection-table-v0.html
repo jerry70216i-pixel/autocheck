@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <title>工程照片查驗表 V0 模板</title>
+</head>
+<body>
+  <table class="inspection-sheet">
+    <caption>工程照片查驗表</caption>
+    <tbody>
+      <tr>
+        <th>工程名稱</th>
+        <td colspan="3">{{projectName}}</td>
+      </tr>
+      <tr>
+        <th>查驗日期</th>
+        <td>{{inspectionDate}}</td>
+        <th>施工位置</th>
+        <td>{{location}}</td>
+      </tr>
+      <tr>
+        <th>查驗項目</th>
+        <td colspan="3">{{inspectionItem}}</td>
+      </tr>
+    </tbody>
+    <thead>
+      <tr>
+        <th>序號</th>
+        <th>照片</th>
+        <th>檔名</th>
+        <th>查驗說明</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{photoRows}}
+    </tbody>
+  </table>
+</body>
+</html>
+

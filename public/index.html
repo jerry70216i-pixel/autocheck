@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>工程照片查驗表 V0</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="hero">
+    <div>
+      <p class="eyebrow">V0 本機版</p>
+      <h1>工程照片查驗表自動化系統</h1>
+      <p class="hero-text">選取照片、預覽排序、輸入查驗說明，並匯出一份固定格式表格。</p>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <div class="panel-title">
+        <span class="step">1</span>
+        <h2>工程基本資料</h2>
+      </div>
+
+      <div class="form-grid">
+        <label>
+          工程名稱
+          <input id="projectName" type="text" placeholder="例：道路改善工程">
+        </label>
+        <label>
+          查驗日期
+          <input id="inspectionDate" type="date">
+        </label>
+        <label>
+          施工位置
+          <input id="location" type="text" placeholder="例：K0+120 至 K0+180">
+        </label>
+        <label>
+          查驗項目
+          <input id="inspectionItem" type="text" placeholder="例：混凝土澆置前查驗">
+        </label>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">
+        <span class="step">2</span>
+        <h2>選取照片</h2>
+      </div>
+
+      <label class="upload-box">
+        <input id="photoInput" type="file" accept="image/*" multiple>
+        <span>點選選取多張照片</span>
+        <small>支援瀏覽器可讀取的 JPG、PNG、WebP 等圖片格式。</small>
+      </label>
+    </section>
+
+    <section class="panel wide">
+      <div class="panel-title split">
+        <div>
+          <span class="step">3</span>
+          <h2>照片預覽與說明</h2>
+        </div>
+        <button id="refreshPreviewButton" type="button">重新產生表格預覽</button>
+      </div>
+
+      <div id="emptyState" class="empty-state">尚未選取照片。</div>
+      <div id="photoList" class="photo-list" aria-live="polite"></div>
+    </section>
+
+    <section class="panel wide">
+      <div class="panel-title split">
+        <div>
+          <span class="step">4</span>
+          <h2>固定表格預覽</h2>
+        </div>
+        <button id="exportButton" type="button">匯出 HTML 表格</button>
+      </div>
+
+      <div id="tablePreview" class="table-preview"></div>
+    </section>
+  </main>
+</body>
+</html>
+
