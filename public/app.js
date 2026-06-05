@@ -2,7 +2,8 @@ import {
   getDefaultInspectionTextTemplates,
   getDefaultWorkItems,
   getInspectionTextTemplates,
-  getWorkItems
+  getWorkItems,
+  savePhotoMetadata
 } from "./storage-repository.js";
 
 "use strict";
@@ -35,9 +36,11 @@ async function loadRepositoryData() {
 
     repositoryState.workItems = workItems;
     repositoryState.inspectionTextTemplates = inspectionTextTemplates;
+    renderPhotoList();
   } catch {
     repositoryState.workItems = getDefaultWorkItems();
     repositoryState.inspectionTextTemplates = getDefaultInspectionTextTemplates();
+    renderPhotoList();
   }
 }
 
@@ -88,6 +91,7 @@ function readPhotoFile(file) {
         name: file.name,
         size: file.size,
         dataUrl: reader.result,
+        workItemId: null,
         description: ""
       });
     };
@@ -118,6 +122,17 @@ function renderPhotoList() {
     const size = document.createElement("span");
     size.textContent = formatFileSize(photo.size);
 
+    const workItemLabel = document.createElement("label");
+    workItemLabel.textContent = "工項";
+
+    const workItemSelect = document.createElement("select");
+    workItemSelect.innerHTML = buildWorkItemOptions(photo.workItemId);
+    workItemSelect.addEventListener("change", () => {
+      updatePhotoWorkItem(photo, workItemSelect.value || null);
+    });
+
+    workItemLabel.appendChild(workItemSelect);
+
     const descriptionLabel = document.createElement("label");
     descriptionLabel.textContent = "查驗說明";
 
@@ -127,11 +142,12 @@ function renderPhotoList() {
     description.placeholder = "例：現場施工情形符合查驗項目。";
     description.addEventListener("input", () => {
       photo.description = description.value;
+      persistPhotoMetadata(photo);
       renderTablePreview();
     });
 
     descriptionLabel.appendChild(description);
-    meta.append(title, size, descriptionLabel);
+    meta.append(title, size, workItemLabel, descriptionLabel);
 
     const actions = document.createElement("div");
     actions.className = "photo-actions";
@@ -157,6 +173,46 @@ function renderPhotoList() {
     card.append(image, meta, actions);
     elements.photoList.appendChild(card);
   });
+}
+
+function buildWorkItemOptions(selectedWorkItemId) {
+  const options = ['<option value="">未選擇工項</option>'];
+
+  repositoryState.workItems.forEach((workItem) => {
+    const selected = workItem.id === selectedWorkItemId ? " selected" : "";
+    options.push(`<option value="${escapeHtml(workItem.id)}"${selected}>${escapeHtml(workItem.name)}</option>`);
+  });
+
+  return options.join("");
+}
+
+function findDefaultTemplateForWorkItem(workItemId) {
+  return repositoryState.inspectionTextTemplates.find((template) => (
+    template.workItemId === workItemId && template.isDefault
+  )) || null;
+}
+
+function updatePhotoWorkItem(photo, workItemId) {
+  const defaultTemplate = findDefaultTemplateForWorkItem(workItemId);
+
+  photo.workItemId = workItemId;
+
+  if (photo.description === "" && defaultTemplate) {
+    photo.description = defaultTemplate.text;
+  }
+
+  persistPhotoMetadata(photo);
+  renderPhotoList();
+  renderTablePreview();
+}
+
+function persistPhotoMetadata(photo) {
+  savePhotoMetadata({
+    id: photo.id,
+    name: photo.name,
+    workItemId: photo.workItemId,
+    description: photo.description
+  }).catch(() => {});
 }
 
 function movePhoto(index, direction) {
@@ -194,7 +250,7 @@ function buildInspectionTableHtml() {
       <td>${index + 1}</td>
       <td><img src="${photo.dataUrl}" alt="${escapeHtml(photo.name)}"></td>
       <td>${escapeHtml(photo.name)}</td>
-      <td>${escapeHtml(photo.description || "未填寫")}</td>
+      <td>${escapeHtml(photo.description || "")}</td>
     </tr>
   `).join("");
 
