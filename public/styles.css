@@ -108,6 +108,11 @@ h2 {
   gap: 10px;
 }
 
+.export-format-control {
+  min-width: 180px;
+  margin-left: auto;
+}
+
 .step {
   display: inline-grid;
   place-items: center;

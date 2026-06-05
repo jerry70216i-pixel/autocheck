@@ -1,18 +1,22 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>工程照片查驗表 V0</title>
+  <title>工程照片查驗表自動化系統 V2</title>
   <link rel="stylesheet" href="styles.css">
+  <script src="./vendor/pizzip.js"></script>
+  <script src="./vendor/pizzip-utils.js"></script>
+  <script src="./vendor/docxtemplater.js"></script>
+  <script src="./vendor/docxtemplater-image-module-free-browserify.js"></script>
   <script type="module" src="./app.js"></script>
 </head>
 <body>
   <header class="hero">
     <div>
-      <p class="eyebrow">V0 本機版</p>
+      <p class="eyebrow">V2 Word 範本版</p>
       <h1>工程照片查驗表自動化系統</h1>
-      <p class="hero-text">選取照片、預覽排序、輸入查驗說明，並匯出一份固定格式表格。</p>
+      <p class="hero-text">選取照片、預覽排序、輸入查驗說明，並匯出符合範本格式的 Word 文件。</p>
     </div>
   </header>
 
@@ -75,7 +79,11 @@
           <span class="step">4</span>
           <h2>固定表格預覽</h2>
         </div>
-        <button id="exportButton" type="button">匯出 HTML 表格</button>
+        <label class="export-format-control">
+          匯出格式
+          <select id="exportFormat"></select>
+        </label>
+        <button id="exportButton" type="button">匯出 Word 文件</button>
       </div>
 
       <div id="tablePreview" class="table-preview"></div>

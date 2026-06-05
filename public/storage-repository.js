@@ -65,7 +65,11 @@ export async function savePhotoMetadata(photoMetadata) {
     id: photoMetadata.id,
     name: photoMetadata.name || "",
     workItemId: photoMetadata.workItemId || null,
-    description: photoMetadata.description || ""
+    date: photoMetadata.date || "",
+    location: photoMetadata.location || "",
+    description: photoMetadata.description || "",
+    designValue: photoMetadata.designValue || "",
+    measuredValue: photoMetadata.measuredValue || ""
   };
 
   return saveRecord(PHOTO_METADATA_STORE, metadata);

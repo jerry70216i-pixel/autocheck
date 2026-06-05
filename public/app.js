@@ -5,6 +5,7 @@ import {
   getWorkItems,
   savePhotoMetadata
 } from "./storage-repository.js";
+import { getExporter, getExporters } from "./exporters/exporter-registry.js";
 
 "use strict";
 
@@ -21,11 +22,23 @@ const elements = {};
 
 document.addEventListener("DOMContentLoaded", () => {
   cacheElements();
+  renderVersionLabel();
   bindEvents();
+  renderExportFormatOptions();
   renderPhotoList();
   renderTablePreview();
   loadRepositoryData();
 });
+
+function renderVersionLabel() {
+  const versionLabel = document.querySelector(".eyebrow");
+
+  if (versionLabel) {
+    versionLabel.textContent = "V2 Word \u7bc4\u672c\u8f38\u51fa";
+  }
+
+  document.title = "\u5de5\u7a0b\u7167\u7247\u67e5\u9a57\u8868\u81ea\u52d5\u5316\u7cfb\u7d71 V2";
+}
 
 async function loadRepositoryData() {
   try {
@@ -54,12 +67,14 @@ function cacheElements() {
   elements.emptyState = document.getElementById("emptyState");
   elements.tablePreview = document.getElementById("tablePreview");
   elements.exportButton = document.getElementById("exportButton");
+  elements.exportFormat = document.getElementById("exportFormat");
   elements.refreshPreviewButton = document.getElementById("refreshPreviewButton");
 }
 
 function bindEvents() {
   elements.photoInput.addEventListener("change", handlePhotoSelection);
   elements.exportButton.addEventListener("click", exportTableHtml);
+  elements.exportFormat.addEventListener("change", renderTablePreview);
   elements.refreshPreviewButton.addEventListener("click", renderTablePreview);
 
   [
@@ -68,6 +83,14 @@ function bindEvents() {
     elements.location,
     elements.inspectionItem
   ].forEach((input) => input.addEventListener("input", renderTablePreview));
+}
+
+function renderExportFormatOptions() {
+  elements.exportFormat.innerHTML = getExporters().map((exporter) => (
+    `<option value="${escapeHtml(exporter.id)}">${escapeHtml(exporter.label)}</option>`
+  )).join("");
+
+  elements.exportFormat.value = "self-check";
 }
 
 async function handlePhotoSelection(event) {
@@ -92,7 +115,11 @@ function readPhotoFile(file) {
         size: file.size,
         dataUrl: reader.result,
         workItemId: null,
-        description: ""
+        date: elements.inspectionDate.value || "",
+        location: elements.location.value.trim(),
+        description: "",
+        designValue: "",
+        measuredValue: ""
       });
     };
 
@@ -117,13 +144,13 @@ function renderPhotoList() {
     meta.className = "photo-meta";
 
     const title = document.createElement("strong");
-    title.textContent = `${index + 1}. ${photo.name}`;
+    title.textContent = String(index + 1) + ". " + photo.name;
 
     const size = document.createElement("span");
     size.textContent = formatFileSize(photo.size);
 
     const workItemLabel = document.createElement("label");
-    workItemLabel.textContent = "工項";
+    workItemLabel.textContent = "\u5de5\u9805";
 
     const workItemSelect = document.createElement("select");
     workItemSelect.innerHTML = buildWorkItemOptions(photo.workItemId);
@@ -133,13 +160,18 @@ function renderPhotoList() {
 
     workItemLabel.appendChild(workItemSelect);
 
+    const dateLabel = createPhotoFieldLabel(photo, "date", "\u65e5\u671f", "date");
+    const locationLabel = createPhotoFieldLabel(photo, "location", "\u4f4d\u7f6e", "text");
+    const designValueLabel = createPhotoFieldLabel(photo, "designValue", "\u8a2d\u8a08\u503c", "text");
+    const measuredValueLabel = createPhotoFieldLabel(photo, "measuredValue", "\u5be6\u6e2c\u503c", "text");
+
     const descriptionLabel = document.createElement("label");
-    descriptionLabel.textContent = "查驗說明";
+    descriptionLabel.textContent = "\u67e5\u9a57\u8aaa\u660e";
 
     const description = document.createElement("textarea");
     description.rows = 3;
-    description.value = photo.description;
-    description.placeholder = "例：現場施工情形符合查驗項目。";
+    description.value = photo.description || "";
+    description.placeholder = "\u8f38\u5165\u6bcf\u5f35\u7167\u7247\u7684\u67e5\u9a57\u8aaa\u660e";
     description.addEventListener("input", () => {
       photo.description = description.value;
       persistPhotoMetadata(photo);
@@ -147,26 +179,26 @@ function renderPhotoList() {
     });
 
     descriptionLabel.appendChild(description);
-    meta.append(title, size, workItemLabel, descriptionLabel);
+    meta.append(title, size, workItemLabel, dateLabel, locationLabel, designValueLabel, measuredValueLabel, descriptionLabel);
 
     const actions = document.createElement("div");
     actions.className = "photo-actions";
 
     const upButton = document.createElement("button");
     upButton.type = "button";
-    upButton.textContent = "上移";
+    upButton.textContent = "\u4e0a\u79fb";
     upButton.disabled = index === 0;
     upButton.addEventListener("click", () => movePhoto(index, -1));
 
     const downButton = document.createElement("button");
     downButton.type = "button";
-    downButton.textContent = "下移";
+    downButton.textContent = "\u4e0b\u79fb";
     downButton.disabled = index === state.photos.length - 1;
     downButton.addEventListener("click", () => movePhoto(index, 1));
 
     const removeButton = document.createElement("button");
     removeButton.type = "button";
-    removeButton.textContent = "移除";
+    removeButton.textContent = "\u79fb\u9664";
     removeButton.addEventListener("click", () => removePhoto(photo.id));
 
     actions.append(upButton, downButton, removeButton);
@@ -175,8 +207,25 @@ function renderPhotoList() {
   });
 }
 
+function createPhotoFieldLabel(photo, fieldName, labelText, inputType) {
+  const label = document.createElement("label");
+  label.textContent = labelText;
+
+  const input = document.createElement("input");
+  input.type = inputType;
+  input.value = photo[fieldName] || "";
+  input.addEventListener("input", () => {
+    photo[fieldName] = input.value;
+    persistPhotoMetadata(photo);
+    renderTablePreview();
+  });
+
+  label.appendChild(input);
+  return label;
+}
+
 function buildWorkItemOptions(selectedWorkItemId) {
-  const options = ['<option value="">未選擇工項</option>'];
+  const options = ['<option value="">\u672a\u9078\u64c7\u5de5\u9805</option>'];
 
   repositoryState.workItems.forEach((workItem) => {
     const selected = workItem.id === selectedWorkItemId ? " selected" : "";
@@ -211,7 +260,11 @@ function persistPhotoMetadata(photo) {
     id: photo.id,
     name: photo.name,
     workItemId: photo.workItemId,
-    description: photo.description
+    date: photo.date || "",
+    location: photo.location || "",
+    description: photo.description || "",
+    designValue: photo.designValue || "",
+    measuredValue: photo.measuredValue || ""
   }).catch(() => {});
 }
 
@@ -236,7 +289,7 @@ function removePhoto(photoId) {
 
 function renderTablePreview() {
   if (state.photos.length === 0) {
-    elements.tablePreview.innerHTML = '<div class="empty-table-note">選取照片後會在這裡產生固定表格預覽。</div>';
+    elements.tablePreview.innerHTML = '<div class="empty-table-note">\u9078\u53d6\u7167\u7247\u5f8c\uff0c\u9019\u88e1\u6703\u986f\u793a\u56fa\u5b9a\u8868\u683c\u9810\u89bd\u3002</div>';
     return;
   }
 
@@ -256,29 +309,29 @@ function buildInspectionTableHtml() {
 
   return `
     <table class="inspection-sheet">
-      <caption>工程照片查驗表</caption>
+      <caption>\u5de5\u7a0b\u7167\u7247\u67e5\u9a57\u8868</caption>
       <tbody>
         <tr>
-          <th>工程名稱</th>
-          <td colspan="3">${escapeHtml(meta.projectName || "未填寫")}</td>
+          <th>\u5de5\u7a0b\u540d\u7a31</th>
+          <td colspan="3">${escapeHtml(meta.projectName || "\u672a\u586b\u5beb")}</td>
         </tr>
         <tr>
-          <th>查驗日期</th>
-          <td>${escapeHtml(meta.inspectionDate || "未填寫")}</td>
-          <th>施工位置</th>
-          <td>${escapeHtml(meta.location || "未填寫")}</td>
+          <th>\u67e5\u9a57\u65e5\u671f</th>
+          <td>${escapeHtml(meta.inspectionDate || "\u672a\u586b\u5beb")}</td>
+          <th>\u65bd\u5de5\u4f4d\u7f6e</th>
+          <td>${escapeHtml(meta.location || "\u672a\u586b\u5beb")}</td>
         </tr>
         <tr>
-          <th>查驗項目</th>
-          <td colspan="3">${escapeHtml(meta.inspectionItem || "未填寫")}</td>
+          <th>\u67e5\u9a57\u9805\u76ee</th>
+          <td colspan="3">${escapeHtml(meta.inspectionItem || "\u672a\u586b\u5beb")}</td>
         </tr>
       </tbody>
       <thead>
         <tr>
-          <th style="width: 64px;">序號</th>
-          <th style="width: 260px;">照片</th>
-          <th>檔名</th>
-          <th>查驗說明</th>
+          <th style="width: 64px;">\u5e8f\u865f</th>
+          <th style="width: 260px;">\u7167\u7247</th>
+          <th>\u6a94\u540d</th>
+          <th>\u67e5\u9a57\u8aaa\u660e</th>
         </tr>
       </thead>
       <tbody>
@@ -297,31 +350,30 @@ function getProjectMeta() {
   };
 }
 
-function exportTableHtml() {
+async function exportTableHtml() {
   if (state.photos.length === 0) {
-    alert("請先選取照片。");
+    alert("\u8acb\u5148\u9078\u53d6\u7167\u7247\u3002");
     return;
   }
 
-  const documentHtml = buildExportDocumentHtml(buildInspectionTableHtml());
-  const blob = new Blob([documentHtml], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
+  const exporter = getExporter(elements.exportFormat.value);
 
-  link.href = url;
-  link.download = buildExportFileName();
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+  try {
+    await exporter.export({
+      meta: getProjectMeta(),
+      photos: state.photos.slice()
+    });
+  } catch (error) {
+    alert(error && error.message ? error.message : String(error));
+  }
 }
 
 function buildExportDocumentHtml(tableHtml) {
   return `<!doctype html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="utf-8">
-  <title>工程照片查驗表</title>
+  <meta charset="UTF-8">
+  <title>\u5de5\u7a0b\u7167\u7247\u67e5\u9a57\u8868</title>
   <style>
     body {
       margin: 24px;
@@ -371,7 +423,7 @@ ${tableHtml}
 
 function buildExportFileName() {
   const meta = getProjectMeta();
-  const name = meta.projectName || "工程照片查驗表";
+  const name = meta.projectName || "\u5de5\u7a0b\u7167\u7247\u67e5\u9a57\u8868";
   const date = meta.inspectionDate || new Date().toISOString().slice(0, 10);
   return `${sanitizeFileName(name)}-${date}.html`;
 }
